@@ -4,81 +4,65 @@ from dice import Dice
 from collections import Counter
 import time
 
-# Initialize Pygame
-pygame.init()
-
-# Window settings
-WINDOW_WIDTH = 800
-WINDOW_HEIGHT = 600
-screen = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
-pygame.display.set_caption("OrcKnuckle")
-
 # Set colors
 WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
 
-# Set font
-font = pygame.font.SysFont(None, 36)
-
 class Game:
     def __init__(self, screen):
+        self.screen = screen
         self.players = []
         self.dice = Dice()
-        self.screen = screen
         self.running = True
-        self.input_active = True
-        self.current_input = ""
-        self.player_inputs = []
+        self.font = pygame.font.SysFont(None, 36)  # Initialize font after Pygame is initialized
 
     def draw_text(self, text, x, y):
         """Helper function to render text on the screen."""
-        text_surface = font.render(text, True, BLACK)
+        text_surface = self.font.render(text, True, BLACK)
         self.screen.blit(text_surface, (x, y))
 
-    def get_text_input(self, prompt, y_offset):
-        """Handle text input for player setup."""
-        waiting = True
-        input_box = ""
+    def input_box(self, prompt, x, y):
+        """Function to display an input box and return the user input."""
+        input_text = ''
+        self.draw_text(prompt, x, y)
+        pygame.display.update()
 
-        while waiting:
-            self.screen.fill(WHITE)
-            self.draw_text(prompt, 20, y_offset)
-            self.draw_text(input_box, 20, y_offset + 40)
-
+        active = True
+        while active:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
-                    self.running = False
-                    waiting = False
+                    pygame.quit()
                 elif event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_RETURN:
-                        waiting = False
+                        active = False
                     elif event.key == pygame.K_BACKSPACE:
-                        input_box = input_box[:-1]  # Remove the last character
+                        input_text = input_text[:-1]
                     else:
-                        input_box += event.unicode  # Add the new character
+                        input_text += event.unicode
 
-            pygame.display.update()
-        
-        return input_box
+                self.screen.fill(WHITE)  # Clear screen before each re-draw
+                self.draw_text(prompt, x, y)
+                self.draw_text(input_text, x, y + 40)
+                pygame.display.update()
+
+        return input_text
 
     def add_player(self):
         """Add human or computer players via GUI."""
-        num_players = int(self.get_text_input("Enter the number of players:", 100))
-
+        num_players = int(self.input_box("Enter the number of players:", 100, 100))
         for i in range(1, num_players + 1):
-            player_name = self.get_text_input(f"Enter name for Player {i}:", 150)
-            player_type = self.get_text_input(f"Is {player_name} a human or computer? (human/computer):", 200).lower()
-            
+            name = self.input_box(f"Enter the name of Player {i}:", 100, 150 + i * 60)
+            player_type = self.input_box(f"Is {name} human or computer?", 100, 150 + i * 100).lower()
+
             if player_type == "human":
-                self.players.append(HumanPlayer(player_name))
+                self.players.append(HumanPlayer(name))
             else:
-                self.players.append(ComputerPlayer(player_name))
+                self.players.append(ComputerPlayer(name))
 
     def apply_cancellation(self):
         """Handle rune cancellation between players."""
         rune_counts = {player.name: Counter([rune for rune, _ in player.rolls]) for player in self.players}
-        self.screen.fill(WHITE)
-        y_offset = 20
+        y_offset = 20  # Start position for displaying cancellations
 
         # Iterate over each player's runes and cancel them accordingly
         while True:
@@ -135,30 +119,25 @@ class Game:
         return rune_counts
 
     def play_round(self):
-        """Play one round of the game where each player rolls."""
+        """Play a single round and display the results on the screen."""
         self.screen.fill(WHITE)
         y_offset = 20
-
         for player in self.players:
             player.roll_knuckles(self.dice)
-            time.sleep(1)  # Adds suspense
+            time.sleep(1)
 
-            # Display the player's rolls on the screen
+            # Display rolls
             self.draw_text(f"{player.name} rolled:", 20, y_offset)
             y_offset += 40
-
             for rune, knuckle_type in player.rolls:
                 self.draw_text(f"{knuckle_type.capitalize()} shows a {rune.capitalize()} ({player.rune_values[rune]} points)", 40, y_offset)
                 y_offset += 40
-
             pygame.display.update()
 
-            if y_offset > WINDOW_HEIGHT - 100:
-                time.sleep(2)
-                self.screen.fill(WHITE)
-                y_offset = 20
-
+        # Apply rune cancellation logic after rolls
         final_runes = self.apply_cancellation()
+
+        # Calculate and display scores after cancellation
         self.calculate_scores(final_runes)
 
     def calculate_scores(self, final_runes):
@@ -176,7 +155,7 @@ class Game:
     def pause_for_next_round(self):
         """Pause the game and wait for player input before continuing."""
         waiting = True
-        self.draw_text("Press any key to start the next round, or press ESC to quit.", 20, WINDOW_HEIGHT - 50)
+        self.draw_text("Press any key to start the next round, or press ESC to quit.", 20, 550)
         pygame.display.update()
 
         while waiting:
@@ -194,14 +173,12 @@ class Game:
     def main_loop(self):
         """Main game loop that handles Pygame events."""
         while self.running:
-            self.screen.fill(WHITE)
             self.play_round()
             self.pause_for_next_round()
-            pygame.display.update()
 
         pygame.quit()
 
     def start(self):
-        """Start the game, set up players, and manage rounds."""
+        """Start the game, handle player input, and manage rounds."""
         self.add_player()
         self.main_loop()
