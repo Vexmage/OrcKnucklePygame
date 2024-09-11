@@ -14,7 +14,7 @@ class Game:
         self.players = []
         self.dice = Dice()
         self.running = True
-        self.font = pygame.font.SysFont(None, 36)  # Initialize font after Pygame is initialized
+        self.font = pygame.font.SysFont(None, 36)
 
     def draw_text(self, text, x, y):
         """Helper function to render text on the screen."""
@@ -59,6 +59,34 @@ class Game:
             else:
                 self.players.append(ComputerPlayer(name))
 
+    def choose_target_gui(self, player, candidates):
+        """Let the human player choose a target using the GUI."""
+        y_offset = 200
+        self.screen.fill(WHITE)
+        self.draw_text(f"{player.name}, choose a target to cancel:", 100, y_offset)
+        y_offset += 40
+
+        for i, candidate in enumerate(candidates, start=1):
+            self.draw_text(f"{i}. {candidate}", 100, y_offset)
+            y_offset += 40
+
+        pygame.display.update()
+
+        # Wait for player input
+        choosing = True
+        while choosing:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    pygame.quit()
+                elif event.type == pygame.KEYDOWN:
+                    if pygame.K_1 <= event.key <= pygame.K_9:
+                        choice = event.key - pygame.K_1
+                        if 0 <= choice < len(candidates):
+                            return candidates[choice]
+                        else:
+                            self.draw_text("Invalid choice. Please choose again.", 100, y_offset + 40)
+                            pygame.display.update()
+
     def apply_cancellation(self):
         """Handle rune cancellation between players."""
         rune_counts = {player.name: Counter([rune for rune, _ in player.rolls]) for player in self.players}
@@ -78,7 +106,7 @@ class Game:
                                     if opp.name != player.name and rune_counts[opp.name]['princess'] > 0
                                 ]
                                 if len(candidates) > 0:
-                                    chosen_target = player.choose_target(candidates)
+                                    chosen_target = self.choose_target_gui(player, candidates)
                                     self.draw_text(f"{player.name}'s ghost cancels {chosen_target}'s princess!", 20, y_offset)
                                     y_offset += 40
                                     rune_counts[player.name]['ghost'] -= 1
@@ -99,7 +127,7 @@ class Game:
                                     if opp.name != player.name and rune_counts[opp.name]['dragon'] > 0
                                 ]
                                 if len(candidates) > 0:
-                                    chosen_target = player.choose_target(candidates)
+                                    chosen_target = self.choose_target_gui(player, candidates)
                                     self.draw_text(f"{player.name}'s knight cancels {chosen_target}'s dragon!", 20, y_offset)
                                     y_offset += 40
                                     rune_counts[player.name]['knight'] -= 1
