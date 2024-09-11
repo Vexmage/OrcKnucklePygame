@@ -1,36 +1,43 @@
 import pygame
 
-def draw_text(screen, text, x, y, font_size=36, color=(0, 0, 0)):
-    """Helper function to render text on the screen."""
-    font = pygame.font.SysFont(None, font_size)
-    text_surface = font.render(text, True, color)
-    screen.blit(text_surface, (x, y))
-
 def input_box(screen, x, y, width, height, prompt):
-    """Helper function for a user input box."""
+    """Display a text input box and return the entered text."""
+    font = pygame.font.SysFont(None, 36)
     input_active = False
-    color = (200, 200, 200)
-    user_text = ''
+    input_text = ''
+    color_active = pygame.Color('dodgerblue2')
+    color_inactive = pygame.Color('lightskyblue3')
+    color = color_inactive
+    input_rect = pygame.Rect(x, y, width, height)
 
-    while True:
+    running = True
+    while running:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                pygame.quit()
-
+                running = False
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                # If the user clicked on the input_box rect
+                if input_rect.collidepoint(event.pos):
+                    input_active = not input_active
+                else:
+                    input_active = False
+                color = color_active if input_active else color_inactive
             if event.type == pygame.KEYDOWN:
                 if input_active:
                     if event.key == pygame.K_RETURN:
-                        return user_text
+                        return input_text  # Return the entered text when pressing Enter
                     elif event.key == pygame.K_BACKSPACE:
-                        user_text = user_text[:-1]
+                        input_text = input_text[:-1]  # Remove the last character
                     else:
-                        user_text += event.unicode
+                        input_text += event.unicode  # Add typed characters
 
-        screen.fill((255, 255, 255))
-        draw_text(screen, prompt, x, y - 40, 24)
-        pygame.draw.rect(screen, color, (x, y, width, height), 2)
+        screen.fill((255, 255, 255))  # White background
+        # Render the prompt
+        prompt_surface = font.render(prompt, True, (0, 0, 0))
+        screen.blit(prompt_surface, (x, y - 40))  # Show prompt above input box
+        # Render the current input text
+        txt_surface = font.render(input_text, True, (0, 0, 0))
+        screen.blit(txt_surface, (input_rect.x + 5, input_rect.y + 5))
+        pygame.draw.rect(screen, color, input_rect, 2)
 
-        font = pygame.font.SysFont(None, 36)
-        text_surface = font.render(user_text, True, (0, 0, 0))
-        screen.blit(text_surface, (x + 5, y + 5))
-        pygame.display.update()
+        pygame.display.flip()
